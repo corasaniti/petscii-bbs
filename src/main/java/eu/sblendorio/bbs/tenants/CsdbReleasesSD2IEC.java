@@ -1,27 +1,22 @@
 package eu.sblendorio.bbs.tenants;
 
-import com.rometools.rome.feed.synd.SyndEntry;
-import com.rometools.rome.feed.synd.SyndFeed;
-import com.rometools.rome.io.SyndFeedInput;
-import com.rometools.rome.io.XmlReader;
-import droid64.addons.DiskUtilities;
-import eu.sblendorio.bbs.core.HtmlUtils;
-import eu.sblendorio.bbs.core.PetsciiThread;
-import eu.sblendorio.bbs.core.XModem;
-import eu.sblendorio.bbs.core.PetsciiThread.DownloadData;
-
-import org.apache.commons.text.WordUtils;
-
-import java.net.URL;
-import java.net.URLEncoder;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static eu.sblendorio.bbs.core.Colors.*;
-import static eu.sblendorio.bbs.core.Keys.*;
+import static eu.sblendorio.bbs.core.Colors.CYAN;
+import static eu.sblendorio.bbs.core.Colors.GREEN;
+import static eu.sblendorio.bbs.core.Colors.GREY2;
+import static eu.sblendorio.bbs.core.Colors.GREY3;
+import static eu.sblendorio.bbs.core.Colors.LIGHT_GREEN;
+import static eu.sblendorio.bbs.core.Colors.LIGHT_RED;
+import static eu.sblendorio.bbs.core.Colors.PURPLE;
+import static eu.sblendorio.bbs.core.Colors.RED;
+import static eu.sblendorio.bbs.core.Colors.WHITE;
+import static eu.sblendorio.bbs.core.Colors.YELLOW;
+import static eu.sblendorio.bbs.core.Keys.CASE_LOCK;
+import static eu.sblendorio.bbs.core.Keys.CLR;
+import static eu.sblendorio.bbs.core.Keys.DEL;
+import static eu.sblendorio.bbs.core.Keys.LOWERCASE;
+import static eu.sblendorio.bbs.core.Keys.REVOFF;
+import static eu.sblendorio.bbs.core.Keys.REVON;
+import static eu.sblendorio.bbs.core.Keys.UP;
 import static eu.sblendorio.bbs.core.Utils.filterPrintable;
 import static java.lang.Integer.compare;
 import static java.util.Arrays.asList;
@@ -29,16 +24,48 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.apache.commons.collections4.MapUtils.isEmpty;
-import static org.apache.commons.lang3.StringUtils.*;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.lowerCase;
+import static org.apache.commons.lang3.StringUtils.repeat;
+import static org.apache.commons.lang3.StringUtils.trim;
 import static org.apache.commons.lang3.math.NumberUtils.toInt;
+
+import java.net.URL;
+import java.net.URLEncoder;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.apache.commons.text.WordUtils;
+
+import com.rometools.rome.feed.synd.SyndEntry;
+import com.rometools.rome.feed.synd.SyndFeed;
+import com.rometools.rome.io.SyndFeedInput;
+import com.rometools.rome.io.XmlReader;
+
+import droid64.addons.DiskUtilities;
+import eu.sblendorio.bbs.core.HtmlUtils;
+import eu.sblendorio.bbs.core.PetsciiThread;
+import eu.sblendorio.bbs.core.XModem;
 
 public class CsdbReleasesSD2IEC extends PetsciiThread {
 
     private static final String RSS_LATESTRELEASES = "https://csdb.dk/rss/latestreleases.php";
     private static final String RSS_LATESTADDITIONS = "https://csdb.dk/rss/latestadditions.php?type=release";
-
     private static final String URL_TEMPLATE = "https://csdb.dk/search/?seinsel=releases&all=1&search=";
     private static final String OTHER_PLATFORM = "Other Platform C64 Tool";
+    
 
     private int currentPage = 1;
     protected int pageSize = 10;
@@ -144,17 +171,17 @@ public class CsdbReleasesSD2IEC extends PetsciiThread {
         listPosts(rssUrl);
         while (true) {
             log("CSDb waiting for input");
-            write(WHITE);print("#"); write(GREY3);
+            write(CYAN);print("#"); write(GREY3);
             print(", [");
-            write(WHITE); print("+-"); write(GREY3);
+            write(CYAN); print("+-"); write(GREY3);
             print("]Page [");
-            write(WHITE); print("H"); write(GREY3);
+            write(CYAN); print("H"); write(GREY3);
             print("]elp [");
-            write(WHITE); print("R"); write(GREY3);
+            write(CYAN); print("R"); write(GREY3);
             print("]eload [");
-            write(WHITE); print("."); write(GREY3);
+            write(CYAN); print("."); write(GREY3);
             print("]");
-            write(WHITE); print("Q"); write(GREY3);
+            write(CYAN); print("Q"); write(GREY3);
             print("uit> ");
             resetInput();
             flush(); String inputRaw = readLine();
@@ -217,26 +244,24 @@ public class CsdbReleasesSD2IEC extends PetsciiThread {
         final String title = p.title;
         final String type = p.type;
         final String id   = p.id;
+        boolean noChoice = false;
         
 
         //Get Content File and get fileName
         DownloadData file = PetsciiThread.download(new URL(url));
         String fileName = file.getFilename();
         byte[] content = null;
-        //TODO remove
-        //byte[] content = DiskUtilities.getPrgContentFromUrl(url);
         
         //Is D64
         if("D64".equals(fileName.substring(fileName.length()-3, fileName.length()).toUpperCase())) {
             logo();
             print("----------------------------------------");
             write(GREEN);
-            print("       Download ");write(LIGHT_GREEN);print("D");write(GREEN);print("64 or ");write(LIGHT_GREEN);print("Z");write(GREEN);println("IP file?");
+            print("       Download ");write(LIGHT_GREEN);print("D");write(GREEN);print("64 or ");write(LIGHT_GREEN);print("Z");write(GREEN);println("IP file?");            
             write(LIGHT_GREEN);
-            println("             Press D or Z");
+            println("             Press D or Z");                                                   
             resetInput(); int key = readKey();
             key = Character.toLowerCase(key);
-
             if (key == 'd') {
                 //Download D64
                 content =  file.getContent();
@@ -245,7 +270,10 @@ public class CsdbReleasesSD2IEC extends PetsciiThread {
                 //Zip D64 into ZipFile
                 content = DiskUtilities.zipBytes(fileName, file.getContent());
             }
-
+            else {
+            	content = null;
+            	noChoice = true;
+            }
         }
         //Is ZIP file
         else if (
@@ -270,40 +298,44 @@ public class CsdbReleasesSD2IEC extends PetsciiThread {
         waitOff();
 
         newline();
-        print("----------------------------------------");
-        write(LIGHT_RED); print("Title:");
-
-        write(PURPLE);println(title);
-        write(LIGHT_RED); print("From: ");
-        write(PURPLE); print(releasedBy);
-        println();
-        write(LIGHT_RED); print("Type: ");
-        write(PURPLE); print(type);
-        println();
-        write(LIGHT_RED); print("ID:   ");
-        write(PURPLE); print(id);
-        println();
-        write(LIGHT_RED); print("Date: ");
-        write(PURPLE); println(strDate);
+        print("----------------------------------------");        
         if (content != null) {
-            write(LIGHT_RED); print("Size: ");
-            write(PURPLE); println(content.length + " bytes");
+	        write(LIGHT_RED); print("Title:");
+	        write(PURPLE);println(title);
+	        write(LIGHT_RED); print("From: ");
+	        write(PURPLE); print(releasedBy);
+	        println();
+	        write(LIGHT_RED); print("Type: ");
+	        write(PURPLE); print(type);
+	        println();
+	        write(LIGHT_RED); print("ID:   ");
+	        write(PURPLE); print(id);
+	        println();
+	        write(LIGHT_RED); print("Date: ");
+	        write(PURPLE); println(strDate);
+	        write(LIGHT_RED); print("Size: ");
+	        write(PURPLE); println(content.length + " bytes");
+	        write(LIGHT_RED); print("File: ");
+	        write(PURPLE); println(fileName);
+	        write(LIGHT_RED); print("URL:  ");
+	        write(PURPLE); print(releaseUri);
         }
-
-        write(LIGHT_RED); print("File: ");
-        write(PURPLE); println(fileName);
-
-        write(LIGHT_RED); print("URL:  ");
-        write(PURPLE); print(releaseUri);
         
        
         if (content == null) {
-            log("Can't download " + releaseUri);
-            write(RED, REVON); println("      ");
-            write(RED, REVON); print(" WARN "); write(WHITE, REVOFF); println(" Can't handle this. Use browser.");
-            write(RED, REVON); println("      "); write(WHITE, REVOFF);
-            write(CYAN); println();
-            print("SORRY - press any key to go back ");
+            if(!noChoice) {
+	        	log("Can't download " + releaseUri);
+	            write(RED, REVON); println("      ");
+	            write(RED, REVON); print(" WARN "); write(WHITE, REVOFF); println("Ops! Can't handle this. Use browser.");
+	            write(RED, REVON); println("      "); write(WHITE, REVOFF);
+	            write(CYAN); println();
+                println("       Press any key to go back");
+	        }
+            else {
+                newline();
+            	println("          Key not allowed....");
+                println("       Press any key to go back");
+            }            
             readKey();
             resetInput();
         } else {
@@ -419,7 +451,10 @@ public class CsdbReleasesSD2IEC extends PetsciiThread {
     private void logo() throws Exception {
         write(CLR, LOWERCASE, CASE_LOCK);
         write(LOGO);
-        write(CYAN); gotoXY(15,3); print("Search your releases");
+        write(YELLOW);
+        gotoXY(15,3); print("Search your releases");
+        write(LOWERCASE);
+        write(CYAN); gotoXY(15,2); print(" for SD2IEC devices");
         write(GREY3); gotoXY(0,5);
 
     }
@@ -550,7 +585,7 @@ public class CsdbReleasesSD2IEC extends PetsciiThread {
         Collections.sort(list);
         return list.size() == 0 ? EMPTY : list.get(0).link;
     }
-
+    
     private static final byte[] LOGO = new byte[] {
         32, 18, 5, -66, -69, -110, -69, 18, -66, -69, -110, -69, 18, 32, -69, -110,
         -69, 18, 32, -110, 13, 32, 18, 32, -110, -68, -66, 18, -69, -65, -110, -66,
